@@ -17,7 +17,7 @@
 # GTEST_DIR = ..
 
 # Tree Functions library code
-TREEF_DIR = ./src/
+TF_DIR = ./src/
 
 # Where to find unit test code.
 TEST_DIR = ./unittests/
@@ -40,6 +40,8 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 # House-keeping build targets.
 
 all : $(TESTS)
+
+tests : $(TESTS)
 
 clean :
 	rm -f $(TESTS) gtest.a gtest_main.a *.o
@@ -77,7 +79,8 @@ sample1.o : $(TF_DIR)/sample1.cc $(TF_DIR)/sample1.h
 
 sample1_unittest.o : $(TEST_DIR)/sample1_unittest.cc \
                      $(TF_DIR)/sample1.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TEST_DIR)/sample1_unittest.cc
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TEST_DIR)/sample1_unittest.cc \
+	-I$(TF_DIR)
 
 sample1_unittest : sample1.o sample1_unittest.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@ -I$(TF_DIR)
+	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@

@@ -1,5 +1,8 @@
 NEG_INF = -1e308
+import itertools as it
 
+# Handles the psuedotree operations and creation
+# based on user provided operators, inverse functions and identities
 class PseudoTreeHandler:
     # Use templates in C++ version
     def __init__(self, op1, op2, inv, id1, id2):
@@ -32,9 +35,9 @@ class PseudoTreeHandler:
                 self.op2(self.op1(self.inv(H),F1_prime), F2)
         return (L, M, B, E, R, A, F)
 
+# this is parallelisable too, but chunks are handled sequentially in the paper
 def block_pseudotree(P, W, t):
-    import itertools as it
-    return reduce(t.merge, (t.make(p, w) for (p, w) in it.izip(P, W))
+    return reduce(t.merge, (t.make(p, w) for (p, w) in it.izip(P, W)))
 
 if __name__ == '__main__':
     P = '(()((()())())(()())(()))'
@@ -45,28 +48,23 @@ if __name__ == '__main__':
     # number of processors
     p = 6
 
+    # when using bitmaps, calculate block size with base type in mind
     block_len = 2*n/p
     block_positions = range(0, 2*n, block_len)
-
-    # this loop easily done in parallel
-    for pos in block_positions:
-        sub_P = P[pos:pos+block_len]
-        sub_W = W[pos:pos+block_len]
-        # compute 7-tuple pseudotree sequentially
-
-    # merge pseudotrees in log p steps
-    # take last value of tuple
 
     t = PseudoTreeHandler(lambda x,y: x + y,
                           lambda x,y: max(x,y),
                           lambda x:-x,
                           0, NEG_INF)
-    a = t.make('(', 6)
-    b = t.make('(', 4)
-    c = t.make(')', -4)
-    d = t.make('(', 9)
-    print t.merge(t.merge(t.merge(a, b), c), d)
-    # experimental, not yet generating my own pseudotrees
-    #left = m( (2,0,1,1,1,1,5), (2,0,1,1,15,15,10) )
-    #mid = m( (-2,-2,-1,-1,-15,0,5), (0,-1,-1,-1,2,1,-1) )
-    #right = m( (0,-1,1,1,5,5,7), (-2,-2,1,-1,-7,0,14) )
+    
+    # this loop easily done in parallel using a parallel map()
+    P_blocks = [P[i:i+block_len] for i in block_positions]
+    W_blocks = [W[i:i+block_len] for i in block_positions]
+    blocks = it.izip(P_blocks, W_blocks)
+    p_trees = map(lambda (p,w):block_pseudotree(p,w,t), blocks)
+
+    # could use a parallel reduce
+    print reduce(t.merge, p_trees)[-1]
+
+    # not sure, but the two steps above could probably be merged into a single
+    # prefix sum

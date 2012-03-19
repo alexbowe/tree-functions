@@ -142,5 +142,7 @@ int main(void)
     TRACE_V((A_v));
     TRACE_V((F_v));
 
+    std::cout << "Result: " << *(F_v.end() - 1) << std::endl;
+
     return 0;
 }

@@ -17,6 +17,7 @@ namespace tf
     private:
         // This operation is NOT commutative, but is associative
         // Which is why we can use a parallel scan, but not a parallel reduce
+        __host__ __device__
         static tuple merge(const tuple& a, const tuple& b)
         {
             static Op1 op1;
@@ -49,6 +50,7 @@ namespace tf
 
     public:
         // Create a pseudo_tree when the parenth is an empty string
+        __host__ __device__
         inline pseudo_tree()
         : t(0, 0, 0, 0, id1, id1, id2)
         {
@@ -59,27 +61,33 @@ namespace tf
         // ( -> ( 1,  0,  1,  1,      w,   w, id2)
         // ) -> (-1, -1, -1, -1, inv(w), id1, id2)
         // NOTE: inv isn't called here - the weight will already be inverted
+        __host__ __device__
         inline pseudo_tree(bool bit, V value)
-        : t(-1 + 2*bit, -1 + bit, -1 + 2*bit, -1 + 2*bit, value, bit? value : id1, id2)
+        : t(-1 + 2*bit, -1 + bit, -1 + 2*bit, -1 + 2*bit,
+            value, bit? value : id1, id2)
         {
         }
 
         // Convert a 7-tuple
+        __host__ __device__
         inline pseudo_tree(const tuple& _t)
         : t(_t)
         {
         }
 
+        __host__ __device__
         inline pseudo_tree(int L, int M, int B, int E, V R, V A, V F)
         : t(L, M, B, E, R, A, F)
         {
         }
 
+        __host__ __device__
         inline V get_result()
         {
             return thrust::get<6>(t);
         }
 
+        __host__ __device__
         inline pseudo_tree operator+(const pseudo_tree& other)
         {
             return pseudo_tree(merge(this->t, other.t));

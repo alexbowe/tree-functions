@@ -39,12 +39,15 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 
 # House-keeping build targets.
 
-all : $(TESTS)
+all : main $(TESTS)
 
 tests : $(TESTS)
 
 clean :
 	rm -f $(TESTS) gtest.a gtest_main.a *.o
+
+main: main.cu src/*.h
+	nvcc main.cu -o $@ -I$(TF_DIR)
 
 # Builds gtest.a and gtest_main.a.
 

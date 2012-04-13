@@ -86,6 +86,11 @@ pseudo_tree_unittest.o: $(TEST_DIR)/pseudo_tree_unittest.cc \
 			nvcc $(CPPFLAGS) -c $(TEST_DIR)/pseudo_tree_unittest.cc \
 			-I$(TF_DIR)
 
-runtests: pseudo_tree_unittest.o gtest_main.a
+stride_iterator_unittest.o: 	$(TEST_DIR)/stride_iterator_unittest.cc \
+				$(TF_DIR)/stride_iterator.h $(GTEST_HEADERS)
+				nvcc $(CPPFLAGS) -c $(TEST_DIR)/stride_iterator_unittest.cc \
+				-I$(TF_DIR)
+
+runtests: pseudo_tree_unittest.o stride_iterator_unittest.o gtest_main.a
 	nvcc -lpthread $^ -o $@
 #	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@

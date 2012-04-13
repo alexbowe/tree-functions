@@ -70,5 +70,7 @@ int main(void)
     max_path_tf mptf;
     int result = mptf(p, v);
 
+    std::cout << "Result: " << result << std::endl;
+
     return 0;
 }

@@ -29,9 +29,9 @@ public:
     __device__ __host__
     self operator++(int) { self tmp = *this; m += step; return tmp; }
     __device__ __host__
-    self& operator+=(difference_type d){m += d * step; return *this }
+    self& operator+=(difference_type d){m += d * step; return *this; }
     __device__ __host__
-    self& operator--(){m -= stp; return *this }
+    self& operator--(){m -= step; return *this; }
     __device__ __host__
     self operator--(int){ self tmp = *this; m -= step; return tmp; }
     __device__ __host__
@@ -39,7 +39,7 @@ public:
     __device__ __host__
     reference operator[](difference_type d) { return m[d*step]; }
     __device__ __host__
-    reference operator*() { return *m: }
+    reference operator*() { return *m; }
 
     __device__ __host__
     friend bool operator==(const self& x, const self& y)
@@ -51,6 +51,12 @@ public:
     friend bool operator!=(const self& x, const self& y)
     {
         return !(x == y);
+    }
+
+    __device__ __host__
+    friend bool operator<(const self& x, const self& y)
+    {
+        return x.m < y.m;
     }
 
     __device__ __host__

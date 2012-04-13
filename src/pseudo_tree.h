@@ -62,12 +62,6 @@ namespace tf
                          value, bit? value : id1, id2);
         }
 
-        __host__ __device__
-        inline V get_result(const tuple& t)
-        {
-            return thrust::get<6>(t);
-        }
-
         Op1 op1;
         Op2 op2;
         Inv inv;

@@ -21,16 +21,19 @@ class tree_function
 public:
     typedef pseudo_tree<V, Op1, Op2, Inv, id1, id2> ptree;
     typedef typename ptree::tuple ptree_tuple;
-
+    
     // num_segments is a parameter because there will be an optimal
     // value for this dependent on the hardware. Defaults to let Thrust do this
     // implicitly (that is, 1 block-width of values per thread).
     template <typename block_type>
-    __device__ __host__
+    __host__
     V operator()(device_vector<block_type>& blocks,
                  device_vector<V>& values,
                  unsigned int num_segments = 0)
     {
+        typedef typename device_vector<block_type>::iterator block_iterator;
+        typedef typename device_vector<V>::iterator value_iterator;
+
         // How wide is a block (in bits)?
         unsigned int block_width = sizeof(block_type) * CHAR_BIT;
 
@@ -56,8 +59,7 @@ public:
         device_vector<V>   A_v(num_segments);
         device_vector<V>   F_v(num_segments);
 
-        typedef typename device_vector<block_type>::iterator block_iterator;
-        typedef typename device_vector<V>::iterator value_iterator;
+        /*
         transform_inclusive_scan(
             // TODO: check size at start, return id? if size is 0
             // Begin tuple iterator - cast so multiple values go to 1 thread
@@ -78,8 +80,8 @@ public:
             // Transform segments initially into pseudo-trees before scanning
             sequential_functor<block_type, V>(values.size(), num_segments, segment_len),
             pt.merge);
-
-        return F_v.last().get_result;
+        */
+        return F_v[num_segments - 1];
     }
 
 private:
@@ -104,8 +106,8 @@ private:
         ptree_tuple operator()(block_type block, value_type value, int segment_idx)
         {
             ptree_tuple temp;
-            block_type blocks* = &block;
-            value_type values* = &value;
+            block_type * blocks = &block;
+            value_type * values = &value;
 
             unsigned int num_bits = (segment_idx == last_segment_idx)? last_segment_width : segment_width; 
             

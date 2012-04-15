@@ -17,7 +17,7 @@ namespace tf
         // This operation is NOT commutative, but is associative
         // Which is why we can use a parallel scan, but not a parallel reduce
         __host__ __device__
-        tuple merge(const tuple& a, const tuple& b)
+        tuple operator()(const tuple& a, const tuple& b)
         {
             // Let's give these tuple members nicer names
             // (that coincide with the paper)
@@ -45,7 +45,7 @@ namespace tf
 
         // Create a pseudo_tree when the parenth is an empty string
         __host__ __device__
-        inline tuple make_pseudo_tree()
+        static inline tuple make_pseudo_tree()
         {
             return tuple(0, 0, 0, 0, id1, id1, id2);
         }
@@ -56,7 +56,7 @@ namespace tf
         // ) -> (-1, -1, -1, -1, inv(w), id1, id2)
         // NOTE: inv isn't called here - the weight will already be inverted
         __host__ __device__
-        inline tuple make_pseudo_tree(bool bit, V value)
+        static inline tuple make_pseudo_tree(bool bit, V value)
         {
             return tuple(-1 + 2*bit, -1 + bit, -1 + 2*bit, -1 + 2*bit,
                          value, bit? value : id1, id2);

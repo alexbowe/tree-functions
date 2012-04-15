@@ -59,19 +59,8 @@ public:
         device_vector<V>   A_v(num_segments);
         device_vector<V>   F_v(num_segments);
 
-        /*
         transform_inclusive_scan(
-            // TODO: check size at start, return id? if size is 0
-            // Begin tuple iterator - cast so multiple values go to 1 thread
-            make_zip_iterator(
-                make_tuple(stride_iterator<block_iterator>(blocks.begin(), segment_len),
-                           stride_iterator<value_iterator>(values.begin(), segment_len*block_width),
-                           segment_counter_start)),
-            // End tuple iterator
-            make_zip_iterator(
-                make_tuple(stride_iterator<block_iterator>(blocks.end(), segment_len),
-                           stride_iterator<value_iterator>(values.end(), segment_len*block_width),
-                           segment_counter_end)),
+            segment_counter_start, segment_counter_end,
             // Output iterator to grid (make it behave as if interleaved)
             make_zip_iterator(
                 make_tuple(L_v.begin(), M_v.begin(), B_v.begin(),
@@ -79,20 +68,13 @@ public:
                            F_v.begin())),
             // Transform segments initially into pseudo-trees before scanning
             sequential_functor<block_type, V>(values.size(), num_segments, segment_len),
-            pt.merge);
-        */
+            pt);
         
-        // typedef tuple<stride_iterator<block_type*> > IteratorTuple;
-        // typedef zip_iterator<IteratorTuple> Ziperator;
-        // IteratorTuple tup(stride_iterator<block_type*>(blocks.data(), segment_len));
-        // Ziperator z(tup);
- 
         return F_v[num_segments - 1];
     }
 
-private:
     template <typename block_type, typename value_type>
-    class sequential_functor
+    struct sequential_functor
     {
         static const unsigned int block_width = sizeof(block_type) * CHAR_BIT;
 
@@ -109,9 +91,10 @@ private:
         }
 
         __device__ __host__
-        ptree_tuple operator()(block_type block, value_type value, int segment_idx)
+        ptree_tuple operator()(int segment_idx)
         {
-            ptree_tuple temp;
+            ptree_tuple temp = ptree::make_pseudo_tree();
+            /*
             block_type * blocks = &block;
             value_type * values = &value;
 
@@ -123,7 +106,7 @@ private:
                 value_type v = values[i];
             
                 temp = pt.merge(temp, pt.make_pseudo_tree(p, v));
-            }
+            }*/
 
             return temp;
         }

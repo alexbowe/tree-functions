@@ -1,14 +1,14 @@
 #ifndef TREE_FUNCTION_H
 #define TREE_FUNCTION_H
 
+#include "pseudo_tree.h"
+#include "stride_iterator.h"
 #include <limits.h>
 #include <thrust/tuple.h>
 #include <thrust/device_vector.h>
 #include <thrust/iterator/zip_iterator.h>
 #include <thrust/transform_scan.h>
 
-#include "pseudo_tree.h"
-#include "stride_iterator.h"
 
 namespace tf
 {
@@ -81,6 +81,12 @@ public:
             sequential_functor<block_type, V>(values.size(), num_segments, segment_len),
             pt.merge);
         */
+        
+        // typedef tuple<stride_iterator<block_type*> > IteratorTuple;
+        // typedef zip_iterator<IteratorTuple> Ziperator;
+        // IteratorTuple tup(stride_iterator<block_type*>(blocks.data(), segment_len));
+        // Ziperator z(tup);
+ 
         return F_v[num_segments - 1];
     }
 

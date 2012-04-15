@@ -18,97 +18,97 @@ using namespace thrust;
 template <typename V, class Op1, class Op2, class Inv, V id1, V id2>
 class tree_function
 {
+
 public:
     typedef pseudo_tree<V, Op1, Op2, Inv, id1, id2> ptree;
     typedef typename ptree::tuple ptree_tuple;
-    
+
     // num_segments is a parameter because there will be an optimal
     // value for this dependent on the hardware. Defaults to let Thrust do this
     // implicitly (that is, 1 block-width of values per thread).
     template <typename block_type>
     __host__
-    V operator()(device_vector<block_type>& blocks,
-                 device_vector<V>& values,
-                 unsigned int num_segments = 0)
+    V operator()(const device_vector<block_type>& blocks,
+                 const device_vector<V>& values,
+                 int num_segments = 0)
     {
-        typedef typename device_vector<block_type>::iterator block_iterator;
-        typedef typename device_vector<V>::iterator value_iterator;
-
-        // How wide is a block (in bits)?
-        unsigned int block_width = sizeof(block_type) * CHAR_BIT;
-
-        // How many blocks will we have (may not be at full capacity)
-        unsigned int num_blocks = (values.size() + block_width - 1)/block_width;
-        // Number of segments defaults to each block going to a thread
-        // (possibly not all concurrently)
-        num_segments = num_segments? num_segments : num_blocks;
-        // Number of blocks in a segment
-        unsigned int segment_len = (num_blocks + num_segments - 1)
-            / num_segments;
-        // Use counting iterators so to know the capacity of the last segment
-        counting_iterator<int> segment_counter_start(0);
-        counting_iterator<int> segment_counter_end(num_segments);
+        sequential_step<block_type, V> seq(blocks, values, num_segments);
 
         // Allocate space for pseudo_trees in non-interleaved format.
         // This will ensure it is aligned correctly, hence access coalesced(?).
-        device_vector<int> L_v(num_segments);
-        device_vector<int> M_v(num_segments);
-        device_vector<int> B_v(num_segments);
-        device_vector<int> E_v(num_segments);
-        device_vector<V>   R_v(num_segments);
-        device_vector<V>   A_v(num_segments);
-        device_vector<V>   F_v(num_segments);
+        device_vector<int> L_v(seq.num_segments);
+        device_vector<int> M_v(seq.num_segments);
+        device_vector<int> B_v(seq.num_segments);
+        device_vector<int> E_v(seq.num_segments);
+        device_vector<V>   R_v(seq.num_segments);
+        device_vector<V>   A_v(seq.num_segments);
+        device_vector<V>   F_v(seq.num_segments);
 
         transform_inclusive_scan(
-            segment_counter_start, segment_counter_end,
-            // Output iterator to grid (make it behave as if interleaved)
-            make_zip_iterator(
-                make_tuple(L_v.begin(), M_v.begin(), B_v.begin(),
-                           E_v.begin(), R_v.begin(), A_v.begin(),
-                           F_v.begin())),
-            // Transform segments initially into pseudo-trees before scanning
-            sequential_functor<block_type, V>(values.size(), num_segments, segment_len),
+            // INPUT segment indexes in the range [0, num_segments)
+            make_counting_iterator(0), make_counting_iterator(seq.num_segments),
+            // OUTPUT to Zip iterator means when we output a tuple, each element is
+            // redirected to its respective vector.
+            make_zip_iterator(make_tuple(L_v.begin(), M_v.begin(), B_v.begin(),
+                                         E_v.begin(), R_v.begin(), A_v.begin(),
+                                         F_v.begin())),
+            // For each segment, transform with the sequential step of the alg.
+            // That is, map each bit-value-pair to a tuple, and merge them.
+            seq,
             pt);
-        
-        return F_v[num_segments - 1];
+ 
+        return F_v[seq.num_segments - 1];
     }
 
     template <typename block_type, typename value_type>
-    struct sequential_functor
+    struct sequential_step
     {
         static const unsigned int block_width = sizeof(block_type) * CHAR_BIT;
 
-        const unsigned int last_segment_idx;
-        const unsigned int last_segment_width;
-        const unsigned int segment_width;
+        const device_vector<block_type>& blocks;
+        const device_vector<V>& values;
+
+        int num_segments;
+        int num_blocks_in_segment;
 
         __device__ __host__
-        sequential_functor(unsigned int num_elements, unsigned int num_segments, unsigned int num_blocks_in_segment)
-        : last_segment_idx(num_segments - 1),
-          last_segment_width(num_blocks_in_segment * block_width),
-          segment_width(num_elements%(num_blocks_in_segment * block_width))
+        sequential_step( const device_vector<block_type>& _blocks,
+                         const device_vector<V>& _values,
+                         unsigned int _num_segments)
+        : blocks(_blocks), values(_values)
         {
+            
+            // How many blocks will we have (may not be at full capacity)
+            unsigned int num_blocks = (values.size() + block_width - 1)/block_width;
+            // Number of segments defaults to each block going to a thread
+            // (possibly not all concurrently)
+            num_segments = _num_segments? _num_segments : num_blocks;
+
+            // Number of blocks in a segment
+            num_blocks_in_segment = (num_blocks + num_segments - 1)/num_segments;
         }
 
+        template <typename Integral>
         __device__ __host__
-        ptree_tuple operator()(int segment_idx)
+        ptree_tuple operator()(Integral segment_idx)
         {
-            ptree_tuple temp = ptree::make_pseudo_tree();
-            /*
-            block_type * blocks = &block;
-            value_type * values = &value;
-
-            unsigned int num_bits = (segment_idx == last_segment_idx)? last_segment_width : segment_width; 
-            
-            for (int i = 0; i < num_bits; i++)
+            ptree_tuple result = ptree::make_pseudo_tree();
+/*
+            // There are fewer bits in the last segment
+            unsigned int num_bits = (segment_idx == num_segments - 1)?
+                values.size() % num_segments
+                : num_blocks_in_segment * block_width; 
+           
+            int seg_start = segment_idx * segment_len * block_width;
+            for (int i = seg_start; i < num_bits; i++)
             {
                 bool p = (blocks[i/block_width] >> (block_width - i%block_width - 1))&1;
                 value_type v = values[i];
             
-                temp = pt.merge(temp, pt.make_pseudo_tree(p, v));
-            }*/
-
-            return temp;
+                result = pt(temp, ptree::make_pseudo_tree(p, v));
+            }
+*/
+            return result;
         }
     };
 

@@ -30,7 +30,7 @@ CXXFLAGS += -g -Wall -Wextra
 
 # All tests produced by this Makefile.  Remember to add new tests you
 # created to the list.
-TESTS = sample1_unittest
+TESTS = runtests
 
 # All Google Test headers.  Usually you shouldn't change this
 # definition.
@@ -39,12 +39,15 @@ GTEST_HEADERS = $(GTEST_DIR)/include/gtest/*.h \
 
 # House-keeping build targets.
 
-all : $(TESTS)
+all : main $(TESTS)
 
 tests : $(TESTS)
 
 clean :
 	rm -f $(TESTS) gtest.a gtest_main.a *.o
+
+main: main.cu src/*.h
+	nvcc main.cu -o $@ -I$(TF_DIR)
 
 # Builds gtest.a and gtest_main.a.
 
@@ -74,13 +77,20 @@ gtest_main.a : gtest-all.o gtest_main.o
 # gtest_main.a, depending on whether it defines its own main()
 # function.
 
-sample1.o : $(TF_DIR)/sample1.cc $(TF_DIR)/sample1.h
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TF_DIR)/sample1.cc
+#unittest.o : $(TF_DIR)/sample1.cc $(TF_DIR)/sample1.h
+#	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TF_DIR)/sample1.cc
 
-sample1_unittest.o : $(TEST_DIR)/sample1_unittest.cc \
-                     $(TF_DIR)/sample1.h $(GTEST_HEADERS)
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TEST_DIR)/sample1_unittest.cc \
-	-I$(TF_DIR)
+pseudo_tree_unittest.o: $(TEST_DIR)/pseudo_tree_unittest.cc \
+			$(TF_DIR)/pseudo_tree.h $(GTEST_HEADERS)
+			#$(CXX) $(CPPFLAGS) $(CXXFLAGS) -c $(TEST_DIR)/pseudo_tree_unittest.cc \
+			nvcc $(CPPFLAGS) -c $(TEST_DIR)/pseudo_tree_unittest.cc \
+			-I$(TF_DIR)
 
-sample1_unittest : sample1.o sample1_unittest.o gtest_main.a
-	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
+stride_iterator_unittest.o: 	$(TEST_DIR)/stride_iterator_unittest.cc \
+				$(TF_DIR)/stride_iterator.h $(GTEST_HEADERS)
+				nvcc $(CPPFLAGS) -c $(TEST_DIR)/stride_iterator_unittest.cc \
+				-I$(TF_DIR)
+
+runtests: pseudo_tree_unittest.o stride_iterator_unittest.o gtest_main.a
+	nvcc -lpthread $^ -o $@
+#	$(CXX) $(CPPFLAGS) $(CXXFLAGS) -lpthread $^ -o $@
